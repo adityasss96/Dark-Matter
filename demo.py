@@ -14,6 +14,7 @@ sigmarzdata = None
 SDrz=None
 densitydata=None
 SDdensity=None
+area=None
 z=None
 R=8
 kdd=300
@@ -22,49 +23,49 @@ myfile=open('chains/1-sigma07')
 f = myfile.read()
 myfile.close()
 
-#my_file=open('chains/1-sigma08')
-#g = my_file.read().replace('\n',',')
-#g = g.split(',')
-#z = np.asarray(g)
-#my_file.close()
-
 den=float(f)
 
 
-#def integrand2(z, R, kdd):
-#      d = den*np.exp(-z/.9)*((-1*(2*267.65*z+(1500*z)/(np.sqrt(z**2+0.18**2))+(kdd*z)/(np.sqrt(z**2+2.5**2))))-(180.08*(z**1.44)*(1/R-(2/2.5))))
-      #print(d)
-#      return d
 
-#def sigmaz():
-#     x = np.linspace(0, z, 1000)
-#     fx = np.exp(-x/.9)*((-1*(2*267.65*x+(1500*x)/(np.sqrt(x**2+0.18**2))+(kdd*x)/(np.sqrt(x**2+2.5**2))))-(180.08*(x**1.44)*(1/R-(2/2.5))))
-#     area = np.sum(fx)*(z)/1000      
+def sigmaz(A,h,n):
+     
+     pp=[]
+     for i in range(len(z)): 
+      x = np.linspace(0, z[i], 1000)
       
-#     v = (area+1513.99892727)/(np.exp(-z/.9))     
-#     return v**.5
+      y= np.exp(-x/h)*((-1*(2*267.65*x+(1500*x)/(np.sqrt(x**2+0.18**2))+(kdd*x)/(np.sqrt(x**2+2.5**2))))-(A*(x**n)*(1/R-(2/2.5))))
+     
+      inte = np.trapz(y,x) 
+      pp.append(inte)
+     
+     v = (np.hstack(pp)+1513.99892727)/(np.exp(-z/h))     
+     return v**.5
 
-def sigmarz(A):
-      return A*(z**1.44)
+def sigmarz(A,n):
+      return A*(z**n)
 
-def density():
-      return den*(np.exp(-z/.9))
+def density(h):
+      return den*(np.exp(-z/h))
 
 
 def prior(cube, ndim, nparams):
 	cube[0] = (4*cube[0]*(10**4))**.5 
-        
-     
+        cube[1] = (((1.9**2)-1)*cube[1]+1)**.5
+        cube[2] = (((1.4**2)-(.4**2))*cube[2]+(.4**2))**.5     
+
 def loglikelihood(cube, ndim, nparams):
+        
         A=cube[0]
-        #sigmazmodel = sigmaz()
-        sigmarzmodel = sigmarz(A)
-        densitymodel = density()
-        loglikelihood = (-0.5 *((sigmarzmodel - sigmarzdata) / SDrz)**2).sum() + (-0.5 *((densitymodel - densitydata) / SDdensity)**2).sum()
+        n=cube[1]
+        h=cube[2]
+        sigmazmodel = sigmaz(A,h,n)
+        sigmarzmodel = sigmarz(A,n)
+        densitymodel = density(h)
+        loglikelihood = (-0.5 *((sigmazmodel - sigmazdata) / SD)**2).sum() + (-0.5 *((sigmarzmodel - sigmarzdata) / SDrz)**2).sum() + (-0.5 *((densitymodel - densitydata) / SDdensity)**2).sum()
         
 	return loglikelihood
 	
-parameters = ["A"]
+parameters = ["A", "n", "h"]
 n_params = len(parameters)
 
 datafile = sys.argv[1]
@@ -87,6 +88,9 @@ SDdensity = np.loadtxt(datafile5)
 
 datafile6 = sys.argv[7]
 z = np.loadtxt(datafile6)
+
+datafile7 = sys.argv[8]
+area = np.loadtxt(datafile7)
 
 
 pymultinest.run(loglikelihood, prior, n_params, outputfiles_basename=datafile + '_1_', resume = False, verbose = False, n_live_points=1000)
