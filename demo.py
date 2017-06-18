@@ -16,8 +16,8 @@ densitydata=None
 SDdensity=None
 area=None
 z=None
-R=8
-kdd=300
+#R=8
+#kdd=300
 
 myfile=open('chains/1-sigma07')
 f = myfile.read()
@@ -26,19 +26,45 @@ myfile.close()
 den=float(f)
 
 
-
+#1513.99892727
 def sigmaz(A,h,n):
      
      pp=[]
+     
+     def integrand2(z):
+        dd = np.exp(-z/h)*(-1*(-1*(2*267.65*z+(1500*z)/(np.sqrt(z**2+0.18**2))+(300*z)/(np.sqrt(z**2+2.5**2))))+(A*(z**n)*(1/8-(2/2.5))))
+       
+        return dd
+     uptoinf = scipy.integrate.quad(integrand2, 0, np.inf)[0]
+   
+     def integrand1(x):
+       
+        d = np.exp(-x/h)*((-1*(2*267.65*x+(1500*x)/(np.sqrt(x**2+0.18**2))+(300*x)/(np.sqrt(x**2+2.5**2))))-(A*(x**n)*(1/8-(2/2.5))))
+        return d 
+        
+
      for i in range(len(z)): 
-      x = np.linspace(0, z[i], 1000)
+      
+      x=z[i]
+
+      inte = scipy.integrate.quad(integrand1, 0, z[i])[0]
+      
+      """
+      x = np.linspace(0, z[i], 100000000)
       
       y= np.exp(-x/h)*((-1*(2*267.65*x+(1500*x)/(np.sqrt(x**2+0.18**2))+(kdd*x)/(np.sqrt(x**2+2.5**2))))-(A*(x**n)*(1/R-(2/2.5))))
      
       inte = np.trapz(y,x) 
+      """
       pp.append(inte)
-     
-     v = (np.hstack(pp)+1513.99892727)/(np.exp(-z/h))     
+      
+     #print np.hstack(pp)
+     v = (np.hstack(pp)+uptoinf)/(np.exp(-z/h))
+     #print z
+     #print np.hstack(pp)  
+     #print v
+     #print v**.5
+     #print
      return v**.5
 
 def sigmarz(A,n):
@@ -93,7 +119,7 @@ datafile7 = sys.argv[8]
 area = np.loadtxt(datafile7)
 
 
-pymultinest.run(loglikelihood, prior, n_params, outputfiles_basename=datafile + '_1_', resume = False, verbose = False, n_live_points=1000)
+pymultinest.run(loglikelihood, prior, n_params, outputfiles_basename=datafile + '_1_', resume = False, verbose = False, n_live_points=400)
 json.dump(parameters, open(datafile + '_1_params.json', 'w')) 
 
 a = pymultinest.Analyzer(outputfiles_basename=datafile + '_1_', n_params = n_params)
